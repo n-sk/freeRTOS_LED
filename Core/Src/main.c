@@ -61,13 +61,16 @@ SD_HandleTypeDef hsd;
 
 UART_HandleTypeDef huart1;
 
-PCD_HandleTypeDef hpcd_USB_OTG_FS;
+HCD_HandleTypeDef hhcd_USB_OTG_FS;
 
 NOR_HandleTypeDef hnor1;
 SRAM_HandleTypeDef hsram2;
 SDRAM_HandleTypeDef hsdram1;
 
 osThreadId defaultTaskHandle;
+osThreadId ledTaskHandle;
+osThreadId uartTaskHandle;
+osSemaphoreId semLEDHandle;
 /* USER CODE BEGIN PV */
 
 /* USER CODE END PV */
@@ -84,9 +87,11 @@ static void MX_LTDC_Init(void);
 static void MX_SAI1_Init(void);
 static void MX_SDIO_SD_Init(void);
 static void MX_USART1_UART_Init(void);
-static void MX_USB_OTG_FS_PCD_Init(void);
+static void MX_USB_OTG_FS_HCD_Init(void);
 static void MX_USB_OTG_HS_USB_Init(void);
 void StartDefaultTask(void const * argument);
+void led_Task(void const * argument);
+void uart_Task(void const * argument);
 
 /* USER CODE BEGIN PFP */
 
@@ -136,7 +141,7 @@ int main(void)
   MX_SAI1_Init();
   MX_SDIO_SD_Init();
   MX_USART1_UART_Init();
-  MX_USB_OTG_FS_PCD_Init();
+  MX_USB_OTG_FS_HCD_Init();
   MX_USB_OTG_HS_USB_Init();
   /* USER CODE BEGIN 2 */
 
@@ -145,6 +150,11 @@ int main(void)
   /* USER CODE BEGIN RTOS_MUTEX */
   /* add mutexes, ... */
   /* USER CODE END RTOS_MUTEX */
+
+  /* Create the semaphores(s) */
+  /* definition and creation of semLED */
+  osSemaphoreDef(semLED);
+  semLEDHandle = osSemaphoreCreate(osSemaphore(semLED), 1);
 
   /* USER CODE BEGIN RTOS_SEMAPHORES */
   /* add semaphores, ... */
@@ -160,8 +170,16 @@ int main(void)
 
   /* Create the thread(s) */
   /* definition and creation of defaultTask */
-  osThreadDef(defaultTask, StartDefaultTask, osPriorityNormal, 0, 128);
+  osThreadDef(defaultTask, StartDefaultTask, osPriorityIdle, 0, 128);
   defaultTaskHandle = osThreadCreate(osThread(defaultTask), NULL);
+
+  /* definition and creation of ledTask */
+  osThreadDef(ledTask, led_Task, osPriorityNormal, 0, 1000);
+  ledTaskHandle = osThreadCreate(osThread(ledTask),(void *) semLEDHandle);
+
+  /* definition and creation of uartTask */
+  osThreadDef(uartTask, uart_Task, osPriorityNormal, 0, 1000);
+  uartTaskHandle = osThreadCreate(osThread(uartTask),(void *) semLEDHandle);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -629,7 +647,7 @@ static void MX_USART1_UART_Init(void)
   * @param None
   * @retval None
   */
-static void MX_USB_OTG_FS_PCD_Init(void)
+static void MX_USB_OTG_FS_HCD_Init(void)
 {
 
   /* USER CODE BEGIN USB_OTG_FS_Init 0 */
@@ -639,17 +657,13 @@ static void MX_USB_OTG_FS_PCD_Init(void)
   /* USER CODE BEGIN USB_OTG_FS_Init 1 */
 
   /* USER CODE END USB_OTG_FS_Init 1 */
-  hpcd_USB_OTG_FS.Instance = USB_OTG_FS;
-  hpcd_USB_OTG_FS.Init.dev_endpoints = 4;
-  hpcd_USB_OTG_FS.Init.speed = PCD_SPEED_FULL;
-  hpcd_USB_OTG_FS.Init.dma_enable = DISABLE;
-  hpcd_USB_OTG_FS.Init.phy_itface = PCD_PHY_EMBEDDED;
-  hpcd_USB_OTG_FS.Init.Sof_enable = DISABLE;
-  hpcd_USB_OTG_FS.Init.low_power_enable = DISABLE;
-  hpcd_USB_OTG_FS.Init.lpm_enable = DISABLE;
-  hpcd_USB_OTG_FS.Init.vbus_sensing_enable = DISABLE;
-  hpcd_USB_OTG_FS.Init.use_dedicated_ep1 = DISABLE;
-  if (HAL_PCD_Init(&hpcd_USB_OTG_FS) != HAL_OK)
+  hhcd_USB_OTG_FS.Instance = USB_OTG_FS;
+  hhcd_USB_OTG_FS.Init.Host_channels = 8;
+  hhcd_USB_OTG_FS.Init.speed = HCD_SPEED_FULL;
+  hhcd_USB_OTG_FS.Init.dma_enable = DISABLE;
+  hhcd_USB_OTG_FS.Init.phy_itface = HCD_PHY_EMBEDDED;
+  hhcd_USB_OTG_FS.Init.Sof_enable = DISABLE;
+  if (HAL_HCD_Init(&hhcd_USB_OTG_FS) != HAL_OK)
   {
     Error_Handler();
   }
@@ -930,6 +944,42 @@ void StartDefaultTask(void const * argument)
     osDelay(1);
   }
   /* USER CODE END 5 */
+}
+
+/* USER CODE BEGIN Header_led_Task */
+/**
+* @brief Function implementing the ledTask thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_led_Task */
+void led_Task(void const * argument)
+{
+  /* USER CODE BEGIN led_Task */
+  /* Infinite loop */
+  for(;;)
+  {
+    osDelay(1);
+  }
+  /* USER CODE END led_Task */
+}
+
+/* USER CODE BEGIN Header_uart_Task */
+/**
+* @brief Function implementing the uartTask thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_uart_Task */
+void uart_Task(void const * argument)
+{
+  /* USER CODE BEGIN uart_Task */
+  /* Infinite loop */
+  for(;;)
+  {
+    osDelay(1);
+  }
+  /* USER CODE END uart_Task */
 }
 
 /**

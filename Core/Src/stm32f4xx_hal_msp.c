@@ -609,6 +609,9 @@ void HAL_UART_MspInit(UART_HandleTypeDef* huart)
     GPIO_InitStruct.Alternate = GPIO_AF7_USART1;
     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
+    /* USART1 interrupt Init */
+    HAL_NVIC_SetPriority(USART1_IRQn, 5, 0);
+    HAL_NVIC_EnableIRQ(USART1_IRQn);
   /* USER CODE BEGIN USART1_MspInit 1 */
 
   /* USER CODE END USART1_MspInit 1 */
@@ -638,6 +641,8 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef* huart)
     */
     HAL_GPIO_DeInit(GPIOA, RS232_IrDA_RX_Pin|RS232_IrDA_TX_Pin);
 
+    /* USART1 interrupt DeInit */
+    HAL_NVIC_DisableIRQ(USART1_IRQn);
   /* USER CODE BEGIN USART1_MspDeInit 1 */
 
   /* USER CODE END USART1_MspDeInit 1 */
@@ -646,15 +651,15 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef* huart)
 }
 
 /**
-* @brief PCD MSP Initialization
+* @brief HCD MSP Initialization
 * This function configures the hardware resources used in this example
-* @param hpcd: PCD handle pointer
+* @param hhcd: HCD handle pointer
 * @retval None
 */
-void HAL_PCD_MspInit(PCD_HandleTypeDef* hpcd)
+void HAL_HCD_MspInit(HCD_HandleTypeDef* hhcd)
 {
   GPIO_InitTypeDef GPIO_InitStruct = {0};
-  if(hpcd->Instance==USB_OTG_FS)
+  if(hhcd->Instance==USB_OTG_FS)
   {
   /* USER CODE BEGIN USB_OTG_FS_MspInit 0 */
 
@@ -682,14 +687,14 @@ void HAL_PCD_MspInit(PCD_HandleTypeDef* hpcd)
 }
 
 /**
-* @brief PCD MSP De-Initialization
+* @brief HCD MSP De-Initialization
 * This function freeze the hardware resources used in this example
-* @param hpcd: PCD handle pointer
+* @param hhcd: HCD handle pointer
 * @retval None
 */
-void HAL_PCD_MspDeInit(PCD_HandleTypeDef* hpcd)
+void HAL_HCD_MspDeInit(HCD_HandleTypeDef* hhcd)
 {
-  if(hpcd->Instance==USB_OTG_FS)
+  if(hhcd->Instance==USB_OTG_FS)
   {
   /* USER CODE BEGIN USB_OTG_FS_MspDeInit 0 */
 
