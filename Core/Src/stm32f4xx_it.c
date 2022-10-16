@@ -59,7 +59,8 @@ extern UART_HandleTypeDef huart1;
 extern TIM_HandleTypeDef htim1;
 
 /* USER CODE BEGIN EV */
-
+extern uint8_t receivedMessage;
+extern uint8_t newMessage;
 /* USER CODE END EV */
 
 /******************************************************************************/
@@ -185,6 +186,7 @@ void USART1_IRQHandler(void)
   HAL_UART_IRQHandler(&huart1);
   /* USER CODE BEGIN USART1_IRQn 1 */
 
+	newMessage = 0x02;
   /* USER CODE END USART1_IRQn 1 */
 }
 

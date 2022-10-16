@@ -23,7 +23,8 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include <stdio.h>
+#include <stdlib.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -33,6 +34,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -71,8 +73,25 @@ osThreadId defaultTaskHandle;
 osThreadId ledTaskHandle;
 osThreadId uartTaskHandle;
 osSemaphoreId semLEDHandle;
+osSemaphoreId semEditHandle;
 /* USER CODE BEGIN PV */
 
+uint8_t receivedMessage[500];
+uint8_t ledOn[] 		= "ledon";
+unsigned int ledOn_time		= 500;
+uint8_t ledOff[]		= "ledoff";
+unsigned int ledOff_time		= 500;
+uint8_t baudrate[] 		= "baudrate";
+uint32_t baudrate_value = 115200;
+uint8_t newMessage = 0x00;
+uint8_t helpMessage[] 	= "--F4 LED DEMO--\n\rINSTRUCTIONS\n\n\rTo change led blinking time:\n\r\
+ledon=xx\n\rledoff=xx\n\rTo change baudrate:\n\rUsual Baudrates: 9600, 14400, 19200, 38400, 57600, 115200\
+\n\rbaudrate=xxxxxx\n\n\rTo see this menu again print \"help\"";
+
+/*
+ * onOffTime[0] --> led off time
+ * onOffTime[1] --> led on time
+ */
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -156,6 +175,10 @@ int main(void)
   osSemaphoreDef(semLED);
   semLEDHandle = osSemaphoreCreate(osSemaphore(semLED), 1);
 
+  /* definition and creation of semEdit */
+  osSemaphoreDef(semEdit);
+  semEditHandle = osSemaphoreCreate(osSemaphore(semEdit), 1);
+
   /* USER CODE BEGIN RTOS_SEMAPHORES */
   /* add semaphores, ... */
   /* USER CODE END RTOS_SEMAPHORES */
@@ -175,11 +198,11 @@ int main(void)
 
   /* definition and creation of ledTask */
   osThreadDef(ledTask, led_Task, osPriorityNormal, 0, 1000);
-  ledTaskHandle = osThreadCreate(osThread(ledTask),(void *) semLEDHandle);
+  ledTaskHandle = osThreadCreate(osThread(ledTask), (void *)semEditHandle);
 
   /* definition and creation of uartTask */
   osThreadDef(uartTask, uart_Task, osPriorityNormal, 0, 1000);
-  uartTaskHandle = osThreadCreate(osThread(uartTask),(void *) semLEDHandle);
+  uartTaskHandle = osThreadCreate(osThread(uartTask), (void *)semEditHandle);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -622,7 +645,7 @@ static void MX_USART1_UART_Init(void)
   /* USER CODE END USART1_Init 0 */
 
   /* USER CODE BEGIN USART1_Init 1 */
-
+  //UART BAUDRATE IS CONFIGURABLE
   /* USER CODE END USART1_Init 1 */
   huart1.Instance = USART1;
   huart1.Init.BaudRate = 115200;
@@ -926,6 +949,17 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 
+static void apperror(void){
+
+}
+
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+
+	if(huart == &huart1){
+		osSemaphoreRelease(semLEDHandle);
+	}
+}
 /* USER CODE END 4 */
 
 /* USER CODE BEGIN Header_StartDefaultTask */
@@ -956,10 +990,20 @@ void StartDefaultTask(void const * argument)
 void led_Task(void const * argument)
 {
   /* USER CODE BEGIN led_Task */
+	osSemaphoreId semafor = (osSemaphoreId) argument;
+
   /* Infinite loop */
   for(;;)
   {
     osDelay(1);
+	if(osSemaphoreWait(semafor, 0)!=osOK){apperror();}
+	else{
+		HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_SET);
+		osDelay(ledOn_time);
+		HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_RESET);
+		osDelay(ledOff_time);
+		osSemaphoreRelease(semafor);
+	}
   }
   /* USER CODE END led_Task */
 }
@@ -975,9 +1019,54 @@ void uart_Task(void const * argument)
 {
   /* USER CODE BEGIN uart_Task */
   /* Infinite loop */
+	static uint8_t *temp;
+	static unsigned int tempValue;
+	osSemaphoreId semafor = (osSemaphoreId) argument;
+
+	HAL_UART_Transmit(&huart1, helpMessage, strlen((const char *)helpMessage), HAL_MAX_DELAY);
+	HAL_UART_Receive_IT(&huart1, receivedMessage, 100);
   for(;;)
   {
     osDelay(1);
+    if (semLEDHandle != NULL)
+    {
+    	if (osSemaphoreWait(semLEDHandle , 0) == osOK)
+    	{
+    		if(osSemaphoreWait(semafor, osWaitForever)!=osOK){apperror();}
+			else{
+				HAL_UART_Transmit(&huart1, receivedMessage, 100, 100);
+				if(strncmp((const char *)receivedMessage,(const char *)ledOn,strlen((const char*)ledOn)) == 0){
+					for (uint8_t i = 0; i < (strlen((const char*)receivedMessage)-strlen((const char*)ledOn)); i++) {
+						temp[i]=receivedMessage[i+strlen((const char*)ledOn)];
+					}
+					sscanf((char *)temp,"%u",(unsigned int*)tempValue);
+					ledOn_time = tempValue;
+				}
+				else if(strncmp((const char *)receivedMessage,(const char *)ledOff,strlen((const char *)ledOff)) == 0){
+					for (uint8_t i = 0; i < (strlen((const char*)receivedMessage)-strlen((const char*)ledOff)); i++) {
+						temp[i]=receivedMessage[i+strlen((const char*)ledOff)];
+					}
+					sscanf((char *)temp,"%u",(unsigned int*)tempValue);
+					ledOff_time = tempValue;
+				}
+				else if(strncmp((const char *)receivedMessage,(const char *)baudrate,strlen((const char *)baudrate)) == 0){
+					for (uint8_t i = 0; i < (strlen((const char*)receivedMessage)-strlen((const char*)baudrate)); i++) {
+						temp[i]=receivedMessage[i+strlen((const char*)baudrate)];
+					}
+					sscanf((char *)temp,"%u",(unsigned int*)tempValue);
+					baudrate_value = tempValue;
+					HAL_UART_DeInit(&huart1);
+					HAL_UART_Init(&huart1);
+				}
+				else{
+					HAL_UART_Transmit(&huart1, (uint8_t*)"Wrong Input\n\r", strlen((const char *)helpMessage),100);
+					HAL_UART_Transmit(&huart1, helpMessage, strlen((const char *)helpMessage),100);
+				}
+				osSemaphoreRelease(semafor);
+			}
+    	}
+    }
+
   }
   /* USER CODE END uart_Task */
 }
