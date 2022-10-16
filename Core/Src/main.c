@@ -1039,24 +1039,36 @@ void uart_Task(void const * argument)
 					for (uint8_t i = 0; i < (strlen((const char*)receivedMessage)-strlen((const char*)ledOn)); i++) {
 						temp[i]=receivedMessage[i+strlen((const char*)ledOn)];
 					}
-					sscanf((char *)temp,"%u",(unsigned int*)tempValue);
-					ledOn_time = tempValue;
+					if(sscanf((char *)temp,"%u",(unsigned int*)tempValue) == 1){
+						ledOn_time = tempValue;
+					}
+					else {
+						HAL_UART_Transmit(&huart1, (uint8_t*)"Wrong Input\n\r", strlen((const char *)helpMessage),100);
+					}
 				}
 				else if(strncmp((const char *)receivedMessage,(const char *)ledOff,strlen((const char *)ledOff)) == 0){
 					for (uint8_t i = 0; i < (strlen((const char*)receivedMessage)-strlen((const char*)ledOff)); i++) {
 						temp[i]=receivedMessage[i+strlen((const char*)ledOff)];
 					}
-					sscanf((char *)temp,"%u",(unsigned int*)tempValue);
-					ledOff_time = tempValue;
+					if(sscanf((char *)temp,"%u",(unsigned int*)tempValue) == 1){
+						ledOff_time = tempValue;
+					}
+					else {
+						HAL_UART_Transmit(&huart1, (uint8_t*)"Wrong Input\n\r", strlen((const char *)helpMessage),100);
+					}
 				}
 				else if(strncmp((const char *)receivedMessage,(const char *)baudrate,strlen((const char *)baudrate)) == 0){
 					for (uint8_t i = 0; i < (strlen((const char*)receivedMessage)-strlen((const char*)baudrate)); i++) {
 						temp[i]=receivedMessage[i+strlen((const char*)baudrate)];
 					}
-					sscanf((char *)temp,"%u",(unsigned int*)tempValue);
-					baudrate_value = tempValue;
-					HAL_UART_DeInit(&huart1);
-					HAL_UART_Init(&huart1);
+					if(sscanf((char *)temp,"%u",(unsigned int*)tempValue) == 1){
+						baudrate_value = tempValue;
+						HAL_UART_DeInit(&huart1);
+						HAL_UART_Init(&huart1);
+					}
+					else {
+						HAL_UART_Transmit(&huart1, (uint8_t*)"Wrong Input\n\r", strlen((const char *)helpMessage),100);
+					}
 				}
 				else{
 					HAL_UART_Transmit(&huart1, (uint8_t*)"Wrong Input\n\r", strlen((const char *)helpMessage),100);
