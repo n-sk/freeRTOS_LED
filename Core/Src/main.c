@@ -25,6 +25,7 @@
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
 #include <stdlib.h>
+#include <ctype.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -950,6 +951,8 @@ static void MX_GPIO_Init(void)
 /* USER CODE BEGIN 4 */
 
 static void apperror(void){
+	static uint8_t errorMessage[] = "Something went wrong!!! Please type again.";
+	HAL_UART_Transmit(&huart1, helpMessage, strlen((const char *)errorMessage), HAL_MAX_DELAY);
 
 }
 
@@ -1037,38 +1040,30 @@ void uart_Task(void const * argument)
 				HAL_UART_Transmit(&huart1, receivedMessage, 100, 100);
 				if(strncmp((const char *)receivedMessage,(const char *)ledOn,strlen((const char*)ledOn)) == 0){
 					for (uint8_t i = 0; i < (strlen((const char*)receivedMessage)-strlen((const char*)ledOn)); i++) {
-						temp[i]=receivedMessage[i+strlen((const char*)ledOn)];
+						if(isdigit(receivedMessage[i+strlen((const char*)ledOn)])==0)apperror();//CHECK IF WE GOT INTEGER
+						else temp[i]=receivedMessage[i+strlen((const char*)ledOn)];
 					}
-					if(sscanf((char *)temp,"%u",(unsigned int*)tempValue) == 1){
-						ledOn_time = tempValue;
-					}
-					else {
-						HAL_UART_Transmit(&huart1, (uint8_t*)"Wrong Input\n\r", strlen((const char *)helpMessage),100);
-					}
+					sscanf((char *)temp,"%u",(unsigned int*)tempValue);
+					ledOn_time = tempValue;
+
 				}
 				else if(strncmp((const char *)receivedMessage,(const char *)ledOff,strlen((const char *)ledOff)) == 0){
 					for (uint8_t i = 0; i < (strlen((const char*)receivedMessage)-strlen((const char*)ledOff)); i++) {
-						temp[i]=receivedMessage[i+strlen((const char*)ledOff)];
+						if(isdigit(receivedMessage[i+strlen((const char*)ledOff)])==0)apperror();//CHECK IF WE GOT INTEGER
+						else temp[i]=receivedMessage[i+strlen((const char*)ledOff)];
 					}
-					if(sscanf((char *)temp,"%u",(unsigned int*)tempValue) == 1){
-						ledOff_time = tempValue;
-					}
-					else {
-						HAL_UART_Transmit(&huart1, (uint8_t*)"Wrong Input\n\r", strlen((const char *)helpMessage),100);
-					}
+					sscanf((char *)temp,"%u",(unsigned int*)tempValue);
+					ledOff_time = tempValue;
 				}
 				else if(strncmp((const char *)receivedMessage,(const char *)baudrate,strlen((const char *)baudrate)) == 0){
 					for (uint8_t i = 0; i < (strlen((const char*)receivedMessage)-strlen((const char*)baudrate)); i++) {
-						temp[i]=receivedMessage[i+strlen((const char*)baudrate)];
+						if(isdigit(receivedMessage[i+strlen((const char*)baudrate)])==0)apperror();//CHECK IF WE GOT INTEGER
+						else temp[i]=receivedMessage[i+strlen((const char*)baudrate)];
 					}
-					if(sscanf((char *)temp,"%u",(unsigned int*)tempValue) == 1){
-						baudrate_value = tempValue;
-						HAL_UART_DeInit(&huart1);
-						HAL_UART_Init(&huart1);
-					}
-					else {
-						HAL_UART_Transmit(&huart1, (uint8_t*)"Wrong Input\n\r", strlen((const char *)helpMessage),100);
-					}
+					sscanf((char *)temp,"%u",(unsigned int*)tempValue);
+					baudrate_value = tempValue;
+					HAL_UART_DeInit(&huart1);
+					HAL_UART_Init(&huart1);
 				}
 				else{
 					HAL_UART_Transmit(&huart1, (uint8_t*)"Wrong Input\n\r", strlen((const char *)helpMessage),100);
